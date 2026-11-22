@@ -1,0 +1,105 @@
+/*
+ * MediLink palette — calm and clinical
+ *   Blue    — the brand and primary actions
+ *   Green   — the laboratory path
+ *   Indigo  — the imaging path
+ *   Amber   — pending / needs attention
+ *   Red     — alerts and critical values
+ */
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+  --bg: #f5f7fa;
+  --bg-tint: #eef3f8;
+  --surface: #ffffff;
+  --surface-2: #f7f9fb;
+  --line: #e3e8ee;
+  --line-strong: #cdd5df;
+  --ink: #17212f;
+  --ink-2: #3a4757;
+  --muted: #67768a;
+
+  --primary: #1f5f8b;
+  --primary-strong: #174a6d;
+  --primary-soft: #e8f0f7;
+  --primary-ink: #ffffff;
+
+  --lab: #2f7d5b;
+  --lab-soft: #e7f3ed;
+  --imaging: #5a5ea6;
+  --imaging-soft: #eeeff8;
+  --warn: #a86d12;
+  --warn-soft: #fbf2e1;
+  --danger: #b83a3a;
+  --danger-soft: #fbeaea;
+  --coral: #b83a3a;
+  --info: #3a6ea5;
+  --info-soft: #e9f0f8;
+
+  --shadow-sm: 0 1px 2px rgb(23 33 47 / 0.05);
+  --shadow: 0 1px 2px rgb(23 33 47 / 0.05), 0 4px 14px rgb(23 33 47 / 0.05);
+  --shadow-lg: 0 16px 40px rgb(23 33 47 / 0.14);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-ink: #3a4757;
+  --sidebar-strong: #17212f;
+  --sidebar-muted: #8592a3;
+  --sidebar-hover: #f3f6f9;
+  --sidebar-active: #e8f0f7;
+  --sidebar-active-ink: #1f5f8b;
+  --sidebar-line: #e3e8ee;
+
+  --viewer-accent: #8fb3d4;
+  --viewer-text: #d5dde6;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #121820;
+  --bg-tint: #16202b;
+  --surface: #1a222c;
+  --surface-2: #1f2833;
+  --line: #2a3542;
+  --line-strong: #364353;
+  --ink: #e4e9ef;
+  --ink-2: #c2cbd6;
+  --muted: #8d99a8;
+
+  --primary: #6a9fcb;
+  --primary-strong: #84b1d6;
+  --primary-soft: #1f3245;
+  --primary-ink: #0f1923;
+
+  --lab: #6cb08f;
+  --lab-soft: #1c3027;
+  --imaging: #9a9dd4;
+  --imaging-soft: #262840;
+  --warn: #d0a15a;
+  --warn-soft: #342a1a;
+  --danger: #d77a7a;
+  --danger-soft: #3a2224;
+  --coral: #d77a7a;
+  --info: #7fa6d0;
+  --info-soft: #1e2b3b;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 6px 18px rgb(0 0 0 / 0.22);
+  --shadow-lg: 0 20px 50px rgb(0 0 0 / 0.45);
+
+  --sidebar-bg: #161d26;
+  --sidebar-ink: #c2cbd6;
+  --sidebar-strong: #e4e9ef;
+  --sidebar-muted: #7a8696;
+  --sidebar-hover: #1f2833;
+  --sidebar-active: #1f3245;
+  --sidebar-active-ink: #a9c8e3;
+  --sidebar-line: #2a3542;
+
+  color-scheme: dark;
+}
