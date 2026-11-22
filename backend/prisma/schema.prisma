@@ -1,0 +1,525 @@
+// MediLink — Integrated Laboratory & Imaging System
+// The 22-table ERD from the Phase 1 report, Appendix A.
+// Table and column names follow the ERD exactly (snake_case, <table>_id keys);
+// Prisma models use PascalCase / camelCase and map to them with @@map / @map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum StaffRole {
+  DOCTOR
+  LAB_TECH
+  RADIOLOGIST
+  RECEPTIONIST
+  ADMIN
+}
+
+enum UserRole {
+  ADMIN
+  DOCTOR
+  LAB_TECH
+  RADIOLOGIST
+  RECEPTIONIST
+  PATIENT
+}
+
+enum AuditAction {
+  LOGIN
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ServiceType {
+  LAB
+  RADIOLOGY
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum OrderPriority {
+  ROUTINE
+  URGENT
+  STAT
+}
+
+enum OrderStatus {
+  ORDERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ItemStatus {
+  ORDERED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ResultFlag {
+  NORMAL
+  HIGH
+  LOW
+  CRITICAL
+}
+
+enum ReportStatus {
+  DRAFT
+  FINAL
+}
+
+enum AnnotationType {
+  LENGTH
+  ANGLE
+  ROI
+  ARROW
+  TEXT
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  INSURANCE
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReviewStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum Hl7Direction {
+  OUTBOUND
+  INBOUND
+}
+
+enum Hl7Status {
+  QUEUED
+  SENT
+  ACKED
+  FAILED
+}
+
+enum AckCode {
+  AA
+  AE
+  AR
+}
+
+// ───────────────────────── People & access (4) ─────────────────────────
+
+model Patient {
+  id         Int      @id @default(autoincrement()) @map("patient_id")
+  fullName   String   @map("full_name") @db.VarChar(120)
+  nationalId String   @unique @map("national_id") @db.VarChar(20)
+  birthDate  DateTime @map("birth_date") @db.Date
+  gender     Gender
+  phone      String?  @db.VarChar(20)
+  email      String?  @db.VarChar(120)
+  address    String?  @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  account       UserAccount?
+  appointments  Appointment[]
+  orders        Order[]
+  diagnoses     Diagnosis[]
+  prescriptions Prescription[]
+  invoices      Invoice[]
+  hl7Messages   Hl7Message[]
+
+  @@map("patient")
+}
+
+model Staff {
+  id        Int       @id @default(autoincrement()) @map("staff_id")
+  fullName  String    @map("full_name") @db.VarChar(120)
+  role      StaffRole
+  specialty String?   @db.VarChar(80)
+  phone     String?   @db.VarChar(20)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  account           UserAccount?
+  appointments      Appointment[]
+  ordersRequested   Order[]           @relation("OrderDoctor")
+  itemsPerformed    OrderItem[]       @relation("ItemPerformer")
+  reportsWritten    RadiologyReport[] @relation("ReportRadiologist")
+  annotations       Annotation[]
+  diagnosesRecorded Diagnosis[]       @relation("DiagnosisDoctor")
+  prescriptions     Prescription[]    @relation("PrescriptionDoctor")
+  cdssReviews       CdssResult[]      @relation("CdssReviewer")
+
+  @@map("staff")
+}
+
+model UserAccount {
+  id           Int       @id @default(autoincrement()) @map("user_id")
+  username     String    @unique @db.VarChar(50)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  role         UserRole
+  staffId      Int?      @unique @map("staff_id")
+  patientId    Int?      @unique @map("patient_id")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLogin    DateTime? @map("last_login")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  staff     Staff?     @relation(fields: [staffId], references: [id])
+  patient   Patient?   @relation(fields: [patientId], references: [id])
+  auditLogs AuditLog[]
+
+  @@map("user_account")
+}
+
+model AuditLog {
+  id        BigInt      @id @default(autoincrement()) @map("log_id")
+  userId    Int?        @map("user_id")
+  action    AuditAction
+  tableName String      @map("table_name") @db.VarChar(50)
+  recordId  Int?        @map("record_id")
+  loggedAt  DateTime    @default(now()) @map("logged_at")
+
+  user UserAccount? @relation(fields: [userId], references: [id])
+
+  @@index([tableName, recordId])
+  @@map("audit_log")
+}
+
+// ─────────────────────────── Requests (4) ───────────────────────────
+
+model Service {
+  id        Int         @id @default(autoincrement()) @map("service_id")
+  name      String      @unique @db.VarChar(100)
+  type      ServiceType
+  modality  String?     @db.VarChar(10)
+  price     Decimal     @db.Decimal(10, 2)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  appointments Appointment[]
+  orderItems   OrderItem[]
+
+  @@map("service")
+}
+
+model Appointment {
+  id        Int               @id @default(autoincrement()) @map("appointment_id")
+  patientId Int               @map("patient_id")
+  staffId   Int?              @map("staff_id")
+  serviceId Int?              @map("service_id")
+  dateTime  DateTime          @map("date_time")
+  status    AppointmentStatus @default(SCHEDULED)
+  notes     String?           @db.VarChar(255)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  patient Patient  @relation(fields: [patientId], references: [id])
+  staff   Staff?   @relation(fields: [staffId], references: [id])
+  service Service? @relation(fields: [serviceId], references: [id])
+  order   Order?
+
+  @@index([staffId, dateTime])
+  @@map("appointment")
+}
+
+model Order {
+  id            Int           @id @default(autoincrement()) @map("order_id")
+  patientId     Int           @map("patient_id")
+  doctorId      Int           @map("doctor_id")
+  appointmentId Int?          @unique @map("appointment_id")
+  orderDate     DateTime      @default(now()) @map("order_date")
+  priority      OrderPriority @default(ROUTINE)
+  status        OrderStatus   @default(ORDERED)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      Staff        @relation("OrderDoctor", fields: [doctorId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  items       OrderItem[]
+  diagnoses   Diagnosis[]
+  invoice     Invoice?
+  hl7Messages Hl7Message[]
+
+  // "orders" (plural) because ORDER is a reserved SQL word
+  @@map("orders")
+}
+
+model OrderItem {
+  id          Int        @id @default(autoincrement()) @map("item_id")
+  orderId     Int        @map("order_id")
+  serviceId   Int        @map("service_id")
+  performedBy Int?       @map("performed_by")
+  status      ItemStatus @default(ORDERED)
+  completedAt DateTime?  @map("completed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service      Service       @relation(fields: [serviceId], references: [id])
+  performer    Staff?        @relation("ItemPerformer", fields: [performedBy], references: [id])
+  labResults   LabResult[]
+  imagingStudy ImagingStudy?
+  cdssAlerts   CdssAlert[]
+  invoiceItem  InvoiceItem?
+
+  @@map("order_item")
+}
+
+// ──────────────────────── Clinical records (8) ────────────────────────
+
+model LabResult {
+  id          Int        @id @default(autoincrement()) @map("result_id")
+  itemId      Int        @map("item_id")
+  testName    String     @map("test_name") @db.VarChar(80)
+  value       String     @db.VarChar(40)
+  unit        String?    @db.VarChar(20)
+  normalRange String?    @map("normal_range") @db.VarChar(40)
+  flag        ResultFlag @default(NORMAL)
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  item OrderItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("lab_result")
+}
+
+model ImagingStudy {
+  id            Int       @id @default(autoincrement()) @map("study_id")
+  itemId        Int       @unique @map("item_id")
+  dicomStudyUid String    @unique @map("dicom_study_uid") @db.VarChar(128)
+  imagePath     String?   @map("image_path") @db.VarChar(255)
+  performedAt   DateTime? @map("performed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  item        OrderItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  series      ImagingSeries[]
+  report      RadiologyReport?
+  cdssResults CdssResult[]
+
+  @@map("imaging_study")
+}
+
+model ImagingSeries {
+  id           Int     @id @default(autoincrement()) @map("series_id")
+  studyId      Int     @map("study_id")
+  seriesUid    String  @unique @map("series_uid") @db.VarChar(128)
+  modality     String? @db.VarChar(10)
+  bodyPart     String? @map("body_part") @db.VarChar(50)
+  description  String? @db.VarChar(255)
+  numInstances Int?    @map("num_instances")
+  storagePath  String? @map("storage_path") @db.VarChar(255)
+
+  study       ImagingStudy @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  annotations Annotation[]
+
+  @@map("imaging_series")
+}
+
+model Annotation {
+  id          Int            @id @default(autoincrement()) @map("annotation_id")
+  seriesId    Int            @map("series_id")
+  instanceUid String?        @map("instance_uid") @db.VarChar(128)
+  staffId     Int            @map("staff_id")
+  type        AnnotationType
+  geometry    Json
+  note        String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  series ImagingSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  staff  Staff         @relation(fields: [staffId], references: [id])
+
+  @@map("annotation")
+}
+
+model RadiologyReport {
+  id            Int          @id @default(autoincrement()) @map("report_id")
+  studyId       Int          @unique @map("study_id")
+  radiologistId Int          @map("radiologist_id")
+  findings      String?      @db.Text
+  impression    String?      @db.Text
+  status        ReportStatus @default(DRAFT)
+  signedAt      DateTime?    @map("signed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  study       ImagingStudy @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  radiologist Staff        @relation("ReportRadiologist", fields: [radiologistId], references: [id])
+
+  @@map("radiology_report")
+}
+
+model Diagnosis {
+  id          Int      @id @default(autoincrement()) @map("diagnosis_id")
+  patientId   Int      @map("patient_id")
+  doctorId    Int      @map("doctor_id")
+  orderId     Int?     @map("order_id")
+  icd10Code   String   @map("icd10_code") @db.VarChar(10)
+  description String?  @db.VarChar(255)
+  diagnosedAt DateTime @map("diagnosed_at") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Staff   @relation("DiagnosisDoctor", fields: [doctorId], references: [id])
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  @@map("diagnosis")
+}
+
+model Prescription {
+  id        Int      @id @default(autoincrement()) @map("prescription_id")
+  patientId Int      @map("patient_id")
+  doctorId  Int      @map("doctor_id")
+  issueDate DateTime @map("issue_date") @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  patient Patient            @relation(fields: [patientId], references: [id])
+  doctor  Staff              @relation("PrescriptionDoctor", fields: [doctorId], references: [id])
+  items   PrescriptionItem[]
+
+  @@map("prescription")
+}
+
+model PrescriptionItem {
+  id             Int     @id @default(autoincrement()) @map("prescription_item_id")
+  prescriptionId Int     @map("prescription_id")
+  drugName       String  @map("drug_name") @db.VarChar(100)
+  dose           String? @db.VarChar(50)
+  frequency      String? @db.VarChar(50)
+  durationDays   Int?    @map("duration_days")
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@map("prescription_item")
+}
+
+// ───────────────────── Billing & integrations (6) ─────────────────────
+
+model Invoice {
+  id            Int           @id @default(autoincrement()) @map("invoice_id")
+  patientId     Int           @map("patient_id")
+  orderId       Int           @unique @map("order_id")
+  total         Decimal       @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  patient  Patient       @relation(fields: [patientId], references: [id])
+  order    Order         @relation(fields: [orderId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@map("invoice")
+}
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement()) @map("invoice_item_id")
+  invoiceId   Int     @map("invoice_id")
+  orderItemId Int     @unique @map("order_item_id")
+  price       Decimal @db.Decimal(10, 2)
+  icd10Code   String? @map("icd10_code") @db.VarChar(10)
+
+  invoice   Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@map("invoice_item")
+}
+
+model Payment {
+  id        Int           @id @default(autoincrement()) @map("payment_id")
+  invoiceId Int           @map("invoice_id")
+  amount    Decimal       @db.Decimal(10, 2)
+  method    PaymentMethod
+  paidAt    DateTime      @default(now()) @map("paid_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("payment")
+}
+
+model CdssAlert {
+  id        Int           @id @default(autoincrement()) @map("alert_id")
+  itemId    Int           @map("item_id")
+  severity  AlertSeverity
+  message   String        @db.VarChar(255)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  item OrderItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("cdss_alert")
+}
+
+model CdssResult {
+  id           Int          @id @default(autoincrement()) @map("cdss_result_id")
+  studyId      Int          @map("study_id")
+  modelName    String       @map("model_name") @db.VarChar(100)
+  prediction   String       @db.VarChar(100)
+  confidence   Decimal?     @db.Decimal(5, 4)
+  heatmapPath  String?      @map("heatmap_path") @db.VarChar(255)
+  details      Json?
+  reviewedBy   Int?         @map("reviewed_by")
+  reviewStatus ReviewStatus @default(PENDING) @map("review_status")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  study    ImagingStudy @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  reviewer Staff?       @relation("CdssReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("cdss_result")
+}
+
+model Hl7Message {
+  id          Int          @id @default(autoincrement()) @map("message_id")
+  orderId     Int?         @map("order_id")
+  patientId   Int?         @map("patient_id")
+  messageType String       @map("message_type") @db.VarChar(20)
+  direction   Hl7Direction
+  status      Hl7Status    @default(QUEUED)
+  controlId   String       @unique @map("control_id") @db.VarChar(50)
+  rawMessage  String       @map("raw_message") @db.Text
+  ackCode     AckCode?     @map("ack_code")
+  error       String?      @db.VarChar(255)
+  sentAt      DateTime?    @map("sent_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  order   Order?   @relation(fields: [orderId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
+
+  @@map("hl7_message")
+}
