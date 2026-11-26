@@ -20,6 +20,6 @@ export default defineModule({
     // Patients pass the role check here; the service limits them to their own record.
     r.get('/:id', validate({ params: idParam }), controller.findOne);
     r.get('/:id/history', validate({ params: idParam }), controller.history);
-    r.patch('/:id', validate({ params: idParam, body: updatePatientDto }), controller.update);
+    r.patch('/:id', Roles('ADMIN','RECEPTIONIST','PATIENT'), validate({ params: idParam, body: updatePatientDto }), controller.update);
   },
 });

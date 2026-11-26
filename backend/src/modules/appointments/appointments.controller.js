@@ -16,6 +16,13 @@ export class AppointmentsController {
     res.status(201).json(appointment);
   };
 
+  reschedule = async (req, res) => {
+    const { id } = req.validated.params;
+    const appointment = await this.appointmentsService.reschedule(req.user, id, req.validated.body.dateTime);
+    audit(this.events, req, 'UPDATE', 'appointment', id);
+    res.json(appointment);
+  };
+
   updateStatus = async (req, res) => {
     const { id } = req.validated.params;
     const appointment = await this.appointmentsService.updateStatus(req.user, id, req.validated.body.status);

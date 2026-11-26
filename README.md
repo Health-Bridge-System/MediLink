@@ -73,3 +73,8 @@ patients · prescriptions · reports · results · services · staff · system
   (DICOMweb) and Cornerstone3D, including MPR and 3D.
 - **HL7 transport:** messages are real HL7 v2.5.1 text and logged, but the ACK is
   produced locally. `Hl7Service.transmit` is where an MLLP client to the EMR simulator goes.
+
+
+## Operational integration QA
+
+See [INSTALL-V5.md](INSTALL-V5.md) for applying and verifying the V5 changes. **Not approved for clinical or commercial use.**

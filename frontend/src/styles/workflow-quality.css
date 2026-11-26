@@ -1,0 +1,17 @@
+/* Cross-module interface quality improvements: no backend behavior is simulated. */
+.ml-row-action{background:#fff;border:1px solid #9dbcd8;color:#164f81;padding:7px 13px;border-radius:8px;font-weight:650;cursor:pointer}
+.ml-row-action:hover{background:#eef6fd}.ml-row-action:focus-visible{outline:3px solid #74b4eb;outline-offset:2px}
+.ml-safe-note{background:#f4f8fd;color:#304b66;border:1px solid #d5e3f0;border-radius:10px;padding:14px;margin:16px 0 3px;line-height:1.6;font-size:13px}
+.ml-service-choice{border:1px solid #d5e2ee;border-radius:10px;margin:14px 0;padding:15px}
+.ml-service-choice legend{font-weight:700;padding:0 7px;color:#203b55}
+.ml-checkboxes label{display:flex;align-items:center;gap:10px;line-height:1.5}
+.ml-checkboxes input{flex-shrink:0;accent-color:#216bb2}
+.ml-actionbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:15px 0;color:#536e86;font-size:13px}
+.ml-workflow-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ml-workflow-steps div{background:#fff;border:1px solid #d9e6ef;border-radius:10px;padding:15px 16px;display:flex;flex-direction:column;gap:6px}
+.ml-workflow-steps strong{color:#194d79}.ml-workflow-steps span{font-size:12px;color:#56718a;line-height:1.55}
+.ml-quality-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ml-quality-metrics div{background:#fff;border:1px solid #d9e6ef;border-radius:10px;padding:16px 18px}
+.ml-quality-metrics small{color:#56718a;display:block;margin-bottom:6px}.ml-quality-metrics strong{font-size:25px;color:#15354f}
+.ml-record-grid pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:700px){.ml-workflow-steps,.ml-quality-metrics{grid-template-columns:1fr}}

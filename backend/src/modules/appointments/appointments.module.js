@@ -4,7 +4,7 @@ import { Roles } from '../../common/guards/roles.guard.js';
 import { idParam, validate } from '../../common/pipes/zod-validation.pipe.js';
 import { AppointmentsController } from './appointments.controller.js';
 import { AppointmentsService } from './appointments.service.js';
-import { createAppointmentDto, queryAppointmentsDto, updateAppointmentStatusDto } from './dto/appointment.dto.js';
+import { createAppointmentDto, queryAppointmentsDto, updateAppointmentStatusDto, rescheduleAppointmentDto } from './dto/appointment.dto.js';
 
 export default defineModule({
   name: 'appointments',
@@ -17,6 +17,7 @@ export default defineModule({
     r.use(JwtAuthGuard);
     r.get('/', validate({ query: queryAppointmentsDto }), controller.findAll);
     r.post('/', Roles('PATIENT', 'RECEPTIONIST', 'ADMIN', 'DOCTOR'), validate({ body: createAppointmentDto }), controller.create);
-    r.patch('/:id/status', validate({ params: idParam, body: updateAppointmentStatusDto }), controller.updateStatus);
+    r.patch('/:id/reschedule', Roles('PATIENT','RECEPTIONIST','ADMIN','DOCTOR'), validate({ params: idParam, body: rescheduleAppointmentDto }), controller.reschedule);
+    r.patch('/:id/status', Roles('PATIENT','RECEPTIONIST','ADMIN','DOCTOR'), validate({ params: idParam, body: updateAppointmentStatusDto }), controller.updateStatus);
   },
 });

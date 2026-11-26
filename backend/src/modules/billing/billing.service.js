@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { BadRequestException, NotFoundException } from '../../common/exceptions/http.exception.js';
+import { BadRequestException, NotFoundException, ConflictException } from '../../common/exceptions/http.exception.js';
 import { paymentStatusFor } from './payment-status.js';
 
 const invoiceInclude = {
@@ -56,18 +56,25 @@ export class BillingService {
   }
 
   async pay(id, { amount, method }) {
-    const invoice = await this.findOne(id);
-    const paid = invoice.payments.reduce((s, p) => s.add(p.amount), new Prisma.Decimal(0));
-    const balance = new Prisma.Decimal(invoice.total).sub(paid);
-    if (balance.lte(0)) throw new BadRequestException('This invoice is already fully paid');
-    if (new Prisma.Decimal(amount).gt(balance)) {
-      throw new BadRequestException(`Amount exceeds the remaining balance of ${balance.toFixed(2)} EGP`);
+    // Read the balance *inside* a serializable transaction: simultaneous cashier
+    // requests must never both pass a stale pre-transaction balance check.
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const invoice = await tx.invoice.findUnique({ where: { id }, include: invoiceInclude });
+        if (!invoice) throw new NotFoundException('Invoice not found');
+        const paid = invoice.payments.reduce((sum, payment) => sum.add(payment.amount), new Prisma.Decimal(0));
+        const balance = new Prisma.Decimal(invoice.total).sub(paid);
+        if (balance.lte(0)) throw new BadRequestException('This invoice is already fully paid');
+        if (new Prisma.Decimal(amount).gt(balance)) {
+          throw new BadRequestException(`Amount exceeds the remaining balance of ${balance.toFixed(2)} EGP`);
+        }
+        await tx.payment.create({ data: { invoiceId: id, amount, method } });
+        await tx.invoice.update({ where: { id }, data: { paymentStatus: paymentStatusFor(invoice.total, paid.add(amount)) } });
+        return tx.invoice.findUnique({ where: { id }, include: invoiceInclude });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (error.code === 'P2034') throw new ConflictException('Concurrent payment update; refresh the invoice before retrying');
+      throw error;
     }
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.payment.create({ data: { invoiceId: id, amount, method } });
-      await tx.invoice.update({ where: { id }, data: { paymentStatus: paymentStatusFor(invoice.total, paid.add(amount)) } });
-      return tx.invoice.findUnique({ where: { id }, include: invoiceInclude });
-    });
   }
 }
