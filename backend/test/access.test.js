@@ -11,19 +11,23 @@ after(async () => {
   await disconnectPrisma();
 });
 
-test('billing is for administrators only', async () => {
-  for (const user of ['reception.rania', 'dr.salma', 'aya.mahmoud']) {
+test('billing is handled by the front desk and administrators', async () => {
+  for (const user of ['dr.salma', 'lab.mona', 'aya.mahmoud']) {
     const res = await api.request('GET', '/invoices', { token: await api.tokenFor(user) });
-    assert.equal(res.status, 403, `${user} should not see billing`);
+    assert.equal(res.status, 403, `${user} should not open billing`);
   }
-  const admin = await api.request('GET', '/invoices', { token: await api.tokenFor('admin') });
-  assert.equal(admin.status, 200);
+  for (const user of ['admin', 'reception.rania']) {
+    const res = await api.request('GET', '/invoices', { token: await api.tokenFor(user) });
+    assert.equal(res.status, 200, `${user} should open billing`);
+  }
 });
 
 test('non-admins get no revenue figures on the dashboard', async () => {
-  const doctor = await api.request('GET', '/reports/dashboard', { token: await api.tokenFor('dr.salma') });
-  assert.equal(doctor.body.kpis.revenueMonth, null);
-  assert.equal(doctor.body.revenueByMonth, null);
+  for (const user of ['dr.salma', 'reception.rania']) {
+    const res = await api.request('GET', '/reports/dashboard', { token: await api.tokenFor(user) });
+    assert.equal(res.body.kpis.revenueMonth, null);
+    assert.equal(res.body.revenueByMonth, null);
+  }
   const admin = await api.request('GET', '/reports/dashboard', { token: await api.tokenFor('admin') });
   assert.equal(typeof admin.body.kpis.revenueMonth, 'number');
 });
@@ -33,7 +37,7 @@ test("a patient can open their own record but not someone else's", async () => {
   const me = await api.request('GET', '/auth/me', { token });
   const own = await api.request('GET', `/patients/${me.body.patientId}/history`, { token });
   assert.equal(own.status, 200);
-  assert.deepEqual(own.body.invoices, []);
+  assert.ok(own.body.invoices.every((i) => i.patientId === me.body.patientId), 'patients see only their own bills');
   const other = await api.request('GET', `/patients/${me.body.patientId + 1}/history`, { token });
   assert.equal(other.status, 403);
 });

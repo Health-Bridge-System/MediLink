@@ -73,8 +73,8 @@ export class PatientsService {
         orderBy: { issueDate: 'desc' },
         include: { doctor: staffName, items: true },
       }),
-      // Billing is visible to administrators only.
-      user.role === 'ADMIN'
+      // Bills: front desk and administrators, and patients for their own record.
+      ['ADMIN', 'RECEPTIONIST', 'PATIENT'].includes(user.role)
         ? this.prisma.invoice.findMany({ where: { patientId: id }, orderBy: { createdAt: 'desc' }, include: { payments: true } })
         : [],
     ]);

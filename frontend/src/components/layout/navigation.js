@@ -11,7 +11,7 @@ export const NAV = [
   { to: '/worklist/lab', label: 'Lab worklist', icon: 'flask', roles: ['ADMIN', 'LAB_TECH', 'DOCTOR'], badge: 'lab' },
   { to: '/worklist/imaging', label: 'Imaging worklist', icon: 'scan', roles: ['ADMIN', 'RADIOLOGIST', 'DOCTOR'], badge: 'imaging' },
   { section: 'Operations' },
-  { to: '/billing', label: 'Billing', icon: 'receipt', roles: ['ADMIN'] },
+  { to: '/billing', label: 'Billing', icon: 'receipt', roles: ['ADMIN', 'RECEPTIONIST'] },
   { to: '/cdss', label: 'Decision support', icon: 'brain', roles: ['ADMIN', 'DOCTOR', 'LAB_TECH', 'RADIOLOGIST'] },
   { section: 'Integration' },
   { to: '/hl7', label: 'HL7 messages', icon: 'message', roles: ['ADMIN', 'DOCTOR'] },

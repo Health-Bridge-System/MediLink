@@ -55,7 +55,7 @@ export default function App() {
         <Route path="worklist/lab" element={guard(['ADMIN', 'LAB_TECH', 'DOCTOR'], <LabWorklistPage />)} />
         <Route path="worklist/imaging" element={guard(['ADMIN', 'RADIOLOGIST', 'DOCTOR'], <ImagingWorklistPage />)} />
         <Route path="imaging/:id" element={<StudyPage />} />
-        <Route path="billing" element={guard(['ADMIN'], <BillingPage />)} />
+        <Route path="billing" element={guard(['ADMIN', 'RECEPTIONIST'], <BillingPage />)} />
         <Route path="cdss" element={guard(['ADMIN', 'DOCTOR', 'LAB_TECH', 'RADIOLOGIST'], <CdssPage />)} />
         <Route path="hl7" element={guard(['ADMIN', 'DOCTOR'], <Hl7Page />)} />
         <Route path="audit" element={guard(['ADMIN'], <AuditPage />)} />

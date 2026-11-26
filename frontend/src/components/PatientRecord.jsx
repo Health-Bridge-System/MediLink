@@ -69,7 +69,7 @@ export default function PatientRecord({ patientId }) {
             </div>
 
             <div className="segmented" data-animate style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>
-              {(is('ADMIN') ? [...TABS, BILLING_TAB] : TABS).map(([key, label]) => (
+              {(is('ADMIN', 'RECEPTIONIST', 'PATIENT') ? [...TABS, BILLING_TAB] : TABS).map(([key, label]) => (
                 <button key={key} className={tab === key ? 'on' : ''} onClick={() => setTab(key)}>
                   {label}
                 </button>
@@ -174,7 +174,7 @@ export default function PatientRecord({ patientId }) {
               </div>
             )}
 
-            {tab === 'billing' && is('ADMIN') && (
+            {tab === 'billing' && is('ADMIN', 'RECEPTIONIST', 'PATIENT') && (
               <div className="card table-wrap" data-animate>
                 <table className="table">
                   <thead>

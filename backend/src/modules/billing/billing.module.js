@@ -21,7 +21,7 @@ export default defineModule({
   routes: (r, c) => {
     const controller = new BillingController({ billingService: c.resolve('billingService'), events: c.resolve('events') });
     // Billing is visible to administrators only.
-    r.use(JwtAuthGuard, Roles('ADMIN'));
+    r.use(JwtAuthGuard, Roles('ADMIN', 'RECEPTIONIST'));
     r.get('/', validate({ query: queryInvoicesDto }), controller.findAll);
     r.get('/:id', validate({ params: idParam }), controller.findOne);
     r.post('/:id/payments', validate({ params: idParam, body: createPaymentDto }), controller.pay);
