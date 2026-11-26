@@ -46,3 +46,18 @@ test('only lab technicians can enter lab results', async () => {
   const res = await api.request('POST', '/results/items/1', { token: await api.tokenFor('rad.youssef'), body: { values: [{ testName: 'WBC', value: 5 }] } });
   assert.equal(res.status, 403);
 });
+
+test('a doctor sees and updates only the appointments booked with them', async () => {
+  const salma = await api.tokenFor('dr.salma');
+  const me = await api.request('GET', '/auth/me', { token: salma });
+  const own = await api.request('GET', '/appointments?pageSize=100', { token: salma });
+  assert.equal(own.status, 200);
+  assert.ok(own.body.items.length > 0);
+  assert.ok(own.body.items.every((a) => a.staff?.id === me.body.staffId), 'only her own appointments');
+
+  const all = await api.request('GET', '/appointments?pageSize=100', { token: await api.tokenFor('reception.rania') });
+  const other = all.body.items.find((a) => a.staff && a.staff.id !== me.body.staffId);
+  assert.ok(other, 'the front desk sees other doctors too');
+  const res = await api.request('PATCH', `/appointments/${other.id}/status`, { token: salma, body: { status: 'CANCELLED' } });
+  assert.equal(res.status, 403);
+});

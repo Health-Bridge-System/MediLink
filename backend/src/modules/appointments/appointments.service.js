@@ -21,6 +21,8 @@ export class AppointmentsService {
       ...(status && { status }),
       ...(upcoming && { dateTime: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
       ...(user.role === 'PATIENT' ? { patientId: user.patientId } : patientId ? { patientId } : {}),
+      // A doctor sees only the visits booked with them; the front desk and admin see all.
+      ...(user.role === 'DOCTOR' && { staffId: user.staffId }),
     };
     const [items, total] = await Promise.all([
       this.prisma.appointment.findMany({
@@ -72,6 +74,9 @@ export class AppointmentsService {
     if (user.role === 'PATIENT') {
       if (appointment.patientId !== user.patientId) throw new ForbiddenException();
       if (status !== 'CANCELLED') throw new ForbiddenException('Patients can only cancel appointments');
+    }
+    if (user.role === 'DOCTOR' && appointment.staffId !== user.staffId) {
+      throw new ForbiddenException('This appointment is booked with another doctor');
     }
     if (['COMPLETED', 'CANCELLED'].includes(appointment.status)) {
       throw new BadRequestException(`This appointment is already ${appointment.status.toLowerCase()}`);
