@@ -56,6 +56,16 @@ export class AppointmentsService {
     return appointment;
   }
 
+  // Called when an order is completed: close the appointment it came from.
+  async completeForOrder({ orderId }) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { appointmentId: true } });
+    if (!order?.appointmentId) return;
+    await this.prisma.appointment.updateMany({
+      where: { id: order.appointmentId, status: { in: ['SCHEDULED', 'CHECKED_IN'] } },
+      data: { status: 'COMPLETED' },
+    });
+  }
+
   async updateStatus(user, id, status) {
     const appointment = await this.prisma.appointment.findUnique({ where: { id } });
     if (!appointment) throw new NotFoundException('Appointment not found');

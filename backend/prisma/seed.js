@@ -197,7 +197,7 @@ async function createOrder(ctx, { patient, doctor, services, at, priority = 'ROU
         staffId: doctor.id,
         serviceId: services[0].id,
         dateTime: at,
-        status: stage === 'ordered' ? 'CHECKED_IN' : 'COMPLETED',
+        status: stage === 'completed' ? 'COMPLETED' : 'CHECKED_IN',
         notes: pick(['Follow-up visit', 'Routine check-up', 'Referred by GP', 'Annual screening', null]),
         createdAt: hoursLater(at, -48),
       },

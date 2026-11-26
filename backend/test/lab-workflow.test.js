@@ -55,3 +55,40 @@ test('a result cannot be entered twice', async () => {
   const res = await api.request('POST', `/results/items/${done.body[0].id}`, { token: lab, body: { values: [{ testName: 'WBC', value: 5 }] } });
   assert.equal(res.status, 400);
 });
+
+// Booked visit -> order from that appointment -> last result entered ->
+// the appointment closes by itself.
+test('an appointment is completed when its order is finished', async () => {
+  const reception = await api.tokenFor('reception.rania');
+  const doctor = await api.tokenFor('dr.omar');
+  const lab = await api.tokenFor('lab.karim');
+
+  const services = await api.request('GET', '/services?type=LAB', { token: doctor });
+  const cbc = services.body.find((s) => s.name === 'Complete Blood Count') ?? services.body[0];
+  const when = new Date();
+  when.setDate(when.getDate() + 1);
+  when.setHours(10, 0, 0, 0);
+
+  const booked = await api.request('POST', '/appointments', {
+    token: reception,
+    body: { patientId: 6, serviceId: cbc.id, dateTime: when.toISOString() },
+  });
+  assert.equal(booked.status, 201);
+
+  const order = await api.request('POST', '/orders', {
+    token: doctor,
+    body: { patientId: 6, appointmentId: booked.body.id, serviceIds: [cbc.id] },
+  });
+  assert.equal(order.status, 201);
+  const itemId = order.body.items[0].id;
+
+  await api.request('PATCH', `/orders/items/${itemId}/start`, { token: lab });
+  const values = cbc.analytes.map((a) => ({ testName: a.testName, value: 5 }));
+  const saved = await api.request('POST', `/results/items/${itemId}`, { token: lab, body: { values } });
+  assert.equal(saved.status, 201, JSON.stringify(saved.body));
+  assert.equal(saved.body.orderStatus, 'COMPLETED');
+
+  const list = await api.request('GET', '/appointments?patientId=6&pageSize=100', { token: reception });
+  const visit = list.body.items.find((a) => a.id === booked.body.id);
+  assert.equal(visit.status, 'COMPLETED');
+});
